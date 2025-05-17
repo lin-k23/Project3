@@ -13,10 +13,10 @@ VDD VDD 0 1.2V
 VSS VSS 0 0
 
 * 输入激励：脉冲信号
-VIN A 0 PWL 0 0 5n 0 5.1n 1.2 10n 1.2 10.1n 0 15n 0 15.1n 1.2 20n 1.2 20.1n 0 25n 0 25.1n 1.2 30n 1.2 30.1n 0 35n 0 35.1n 1.2 40n 1.2 40.1n 0 45n 0 45.1n 1.2 50n 1.2
+VIN A 0 PWL 0 0 5n 0 5.1n 1.2 10n 1.2 10.1n 0 15n 0 15.1n 1.2 20n 1.2 20.1n 0 25n 0 25.1n 1.2 30n 1.2
 
 * 实例化反相器
-XINV A Z VDD VSS inv Scale=2 Sp=2 Sx=1
+XINV A Z VDD VSS inv Scale=3
 
 * 仿真控制
 .tran 1p 20n
