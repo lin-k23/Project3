@@ -370,23 +370,160 @@ mn Z A VSS VSS NM  w='120n*Sx' l=80n
 .ends inv
 *-------------------------------end of Inverter example--------------------------*
 
+* -------------------------XOR gate model----------------------- *
+* This is a simple XOR gate model using transistors.
+.subckt XOR A B Z VDD VSS
+XINV A Abar VDD VSS inv Sx=1 Sp=2 Scale=2
+m1 Z B A VDD PM w=120n l=80n
+m2 Z A B VDD PM w=120n l=80n
+m3 Z B Abar VSS NM w=120n l=80n
+m4 Z Abar B VSS NM w=120n l=80n
+.ends XOR
+* -------------------------end of XOR gate model------------------ *
+
+* -------------------------Multiplexer: A------------------------ *
+.subckt MUXA A B S Z VDD VSS
+* use pass transistor logic
+* when S=1, Z=A
+* when S=0, Z=B
+XINV S Sbar VDD VSS inv scale=2
+m1 A Sbar Z VDD PM w=120n l=80n
+m2 A S Z VSS NM w=120n l=80n
+m3 B S Z VDD PM w=120n l=80n
+m4 B Sbar Z VSS NM w=120n l=80n
+.ends MUXA
+* -------------------------end of Multiplexer: A------------------ *
+
+* -------------------------subcircuit for Full Adder------------------------ *
+.subckt MID A B C Z VDD VSS
+m1 AB A VDD VDD PM w=120n l=80n
+m2 Z B AB VDD PM w=120n l=80n
+m3 Z B BC VSS NM w=120n l=80n
+m4 BC C VSS VSS NM w=120n l=80n
+.ends MID
+* -------------------------end of subcircuit for Full Adder------------------ *
+
+* -------------------------Full Adder-------------------------------- *
+.subckt FA A B C SUM COUT VDD VSS
+* Instantiate the XOR gates and AND gates to create a Full Adder
+XXOR A B X1 VDD VSS XOR
+XINV1 X1 X2 VDD VSS inv
+XINV2 C Cbar VDD VSS inv
+XMID1 X2 C X1 COUT VDD VSS MID
+XMID2 X1 A X2 COUT VDD VSS MID
+XINV3 Cbar MIDSUM X1 X2 inv
+m11 Cbar X2 MIDSUM VSS NM w=120n l=80n
+m12 Cbar X1 MIDSUM VDD PM w=120n l=80n
+XINV4 MIDSUM SUM VDD VSS inv
+.ends FA
+* -------------------------end of Full Adder------------------------ *
+
+* ------------------------2bits NAND ------------------------ *
+* This is a 2-bit NAND gate using the previously defined components.
+.subckt NAND2 A B Z VDD VSS
+mp1 Z A VDD VDD PM w=240n l=80n
+mp2 Z B VDD VDD PM w=240n l=80n
+mn1 Z A X0 VSS NM w=240n l=80n
+mn2 X0 B VSS VSS NM w=240n l=80n
+.ends NAND2
+* --------------------------end of 2bits NAND ------------------------ *
+
+* ------------------------2bits AND ------------------------ *
+* This is a 2-bit AND gate using the previously defined components.
+.subckt AND2 A B Z VDD VSS
+XNAND2 A B Z1 VDD VSS NAND2
+XINV1 Z1 Z VDD VSS inv
+.ends AND2
+* ------------------------end of 2bits AND ------------------------ *
+
+* ------------------------4bits AND ------------------------ *
+* This is a 4-bit AND gate using the previously defined components.
+.subckt AND4 A B C D Z VDD VSS
+XAND2_0  A B Z1 VDD VSS AND2
+XAND2_1  C D Z2 VDD VSS AND2
+XAND2_2 Z1 Z2 Z VDD VSS AND2
+.ends AND4
+* ------------------------end of 4bits AND ------------------------ *
+
+* ------------------------SELGEN ------------------------ *
+.subckt SELGEN A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0] SEL VDD VSS
+XXOR0 A[0] B[0] P0 VDD VSS XOR
+XXOR1 A[1] B[1] P1 VDD VSS XOR
+XXOR2 A[2] B[2] P2 VDD VSS XOR
+XXOR3 A[3] B[3] P3 VDD VSS XOR
+XAND4 P0 P1 P2 P3 SEL VDD VSS AND4
+.ends SELGEN
+* ------------------------end of SELGEN ------------------------ *
+
+* ------------------------4bits Ripple Carry Adder------------------------ *
+* This is a 4-bit Ripple Carry Adder using the previously defined components.
+.subckt RCA4 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
++ SUM[3] SUM[2] SUM[1] SUM[0] CIN COUT VDD VSS
+* Instantiate the Full Adders
+XFA0 A[0] B[0] CIN SUM[0] C1 VDD VSS FA
+XFA1 A[1] B[1] C1 SUM[1] C2 VDD VSS FA
+XFA2 A[2] B[2] C2 SUM[2] C3 VDD VSS FA
+XFA3 A[3] B[3] C3 SUM[3] COUT VDD VSS FA
+.ends RCA4
+* ------------------------end of 4bits Ripple Carry Adder------------------------ *
+
 *your code (design or implementation) goes here
-.subckt
-UCB_ADDER_32 A[31] A[30] A[29] A[28] A[27] A[26] A[25] A[24] A[23] A[22] A[21] A[20]
-+ A[19] A[18] A[17] A[16] A[15] A[14] A[13] A[12] A[11] A[10] A[9] A[8] A[7] A[6]
-+ A[5] A[4] A[3] A[2] A[1] A[0] B[31] B[30] B[29] B[28] B[27] B[26] B[25] B[24]
-+ B[23] B[22] B[21] B[20] B[19] B[18] B[17] B[16] B[15] B[14] B[13] B[12] B[11]
-+ B[10] B[9] B[8] B[7] B[6] B[5] B[4] B[3] B[2] B[1] B[0] SUM[32] SUM[31] SUM[30]
-+ SUM[29] SUM[28] SUM[27] SUM[26] SUM[25] SUM[24] SUM[23] SUM[22] SUM[21] SUM[20]
-+ SUM[19] SUM[18] SUM[17] SUM[16] SUM[15] SUM[14] SUM[13] SUM[12] SUM[11] SUM[10]
-+ SUM[9] SUM[8] SUM[7] SUM[6] SUM[5] SUM[4] SUM[3] SUM[2] SUM[1] SUM[0] vdd gnd
-.ends
-
-
-
-
-
-
+.subckt UCB_ADDER_32 A[31] A[30] A[29] A[28] A[27] A[26] A[25] A[24]
++ A[23] A[22] A[21] A[20] A[19] A[18] A[17] A[16] A[15] A[14] A[13]
++ A[12] A[11] A[10] A[9] A[8] A[7] A[6] A[5] A[4] A[3] A[2] A[1] A[0]
++ B[31] B[30] B[29] B[28] B[27] B[26] B[25] B[24] B[23] B[22] B[21]
++ B[20] B[19] B[18] B[17] B[16] B[15] B[14] B[13] B[12] B[11] B[10]
++ B[9] B[8] B[7] B[6] B[5] B[4] B[3] B[2] B[1] B[0] SUM[32] SUM[31]
++ SUM[30] SUM[29] SUM[28] SUM[27] SUM[26] SUM[25] SUM[24] SUM[23]
++ SUM[22] SUM[21] SUM[20] SUM[19] SUM[18] SUM[17] SUM[16] SUM[15]
++ SUM[14] SUM[13] SUM[12] SUM[11] SUM[10] SUM[9] SUM[8] SUM[7] SUM[6]
++ SUM[5] SUM[4] SUM[3] SUM[2] SUM[1] SUM[0] VDD VSS
+* Initialize C[0] by connecting it to VSS
+VC0_tie C[0] VSS DC 0
+* Generate the select signals
+XSELGEN_0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
++ SEL[0] VDD VSS SELGEN
+XSELGEN_1 A[7] A[6] A[5] A[4] B[7] B[6] B[5] B[4]
++ SEL[1] VDD VSS SELGEN
+XSELGEN_2 A[11] A[10] A[9] A[8] B[11] B[10] B[9] B[8]
++ SEL[2] VDD VSS SELGEN
+XSELGEN_3 A[15] A[14] A[13] A[12] B[15] B[14] B[13] B[12]
++ SEL[3] VDD VSS SELGEN
+XSELGEN_4 A[19] A[18] A[17] A[16] B[19] B[18] B[17] B[16]
++ SEL[4] VDD VSS SELGEN
+XSELGEN_5 A[23] A[22] A[21] A[20] B[23] B[22] B[21] B[20]
++ SEL[5] VDD VSS SELGEN
+XSELGEN_6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24]
++ SEL[6] VDD VSS SELGEN
+XSELGEN_7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28]
++ SEL[7] VDD VSS SELGEN
+* Instantiate the 4-bit Ripple Carry Adders
+XRC4_0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
++ SUM[3] SUM[2] SUM[1] SUM[0] C[0] COUT[1] VDD VSS RCA4
+XRC4_1 A[7] A[6] A[5] A[4] B[7] B[6] B[5] B[4]
++ SUM[7] SUM[6] SUM[5] SUM[4] C[1] COUT[2] VDD VSS RCA4
+XRC4_2 A[11] A[10] A[9] A[8] B[11] B[10] B[9] B[8]
++ SUM[11] SUM[10] SUM[9] SUM[8] C[2] COUT[3] VDD VSS RCA4
+XRC4_3 A[15] A[14] A[13] A[12] B[15] B[14] B[13] B[12]
++ SUM[15] SUM[14] SUM[13] SUM[12] C[3] COUT[4] VDD VSS RCA4
+XRC4_4 A[19] A[18] A[17] A[16] B[19] B[18] B[17] B[16]
++ SUM[19] SUM[18] SUM[17] SUM[16] C[4] COUT[5] VDD VSS RCA4
+XRC4_5 A[23] A[22] A[21] A[20] B[23] B[22] B[21] B[20]
++ SUM[23] SUM[22] SUM[21] SUM[20] C[5] COUT[6] VDD VSS RCA4
+XRC4_6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24]
++ SUM[27] SUM[26] SUM[25] SUM[24] C[6] COUT[7] VDD VSS RCA4
+XRC4_7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28]
++ SUM[31] SUM[30] SUM[29] SUM[28] C[7] COUT[8] VDD VSS RCA4
+* Instantiate the Multiplexers
+XMUXA_0 C[0] COUT[1] SEL[0] C[1] VDD VSS MUXA
+XMUXA_1 C[1] COUT[2] SEL[1] C[2] VDD VSS MUXA
+XMUXA_2 C[2] COUT[3] SEL[2] C[3] VDD VSS MUXA
+XMUXA_3 C[3] COUT[4] SEL[3] C[4] VDD VSS MUXA
+XMUXA_4 C[4] COUT[5] SEL[4] C[5] VDD VSS MUXA
+XMUXA_5 C[5] COUT[6] SEL[5] C[6] VDD VSS MUXA
+XMUXA_6 C[6] COUT[7] SEL[6] C[7] VDD VSS MUXA
+XMUXA_7 C[7] COUT[8] SEL[7] SUM[32] VDD VSS MUXA
+.ends UCB_ADDER_32
 
 
 *your code (design or implementation) ends here
@@ -394,20 +531,6 @@ UCB_ADDER_32 A[31] A[30] A[29] A[28] A[27] A[26] A[25] A[24] A[23] A[22] A[21] A
 *#################################################end of your code##################################################*
 *#################################################end of your code##################################################*
 *#################################################end of your code##################################################*
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
