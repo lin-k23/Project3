@@ -4,3 +4,8 @@ tb_BerkeleyFA/*
 !tb_BerkeleyFA/tb_BerkeleyFA.sp
 tb_inv/*
 !tb_inv/tb_inv.sp
+tb_32bit_adder/*
+!tb_32bit_adder/32bits_UCB_Carrybypass_adder.sp
+!tb_32bit_adder/sim_vec_critical_path.vec
+!tb_32bit_adder/sim_vec_function.vec
+!tb_32bit_adder/sim_vec_I_P_PDP_EDP.vec
