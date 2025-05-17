@@ -1,0 +1,6 @@
+tb_mux/*
+!tb_mux/tb_mux.sp
+tb_BerkeleyFA/*
+!tb_BerkeleyFA/tb_BerkeleyFA.sp
+tb_inv/*
+!tb_inv/tb_inv.sp
