@@ -364,7 +364,7 @@
 
 *-------------------------------Inverter example---------------------------------*
 *you can specify the actual value of the parameter "Sp" and "Scale" when instantiating this inverter.
-.subckt inv A Z VDD VSS Sx=1 Sp=2 Scale=4
+.subckt inv A Z VDD VSS Sx=1 Sp=2 Scale=1
 mp Z A VDD VDD PM  w='120n*Sp*Scale' l=80n
 mn Z A VSS VSS NM  w='120n*Sx' l=80n
 .ends inv
@@ -373,7 +373,7 @@ mn Z A VSS VSS NM  w='120n*Sx' l=80n
 * -------------------------XOR gate model----------------------- *
 * This is a simple XOR gate model using transistors.
 .subckt XOR A B Z VDD VSS
-XINV A Abar VDD VSS inv Sx=1 Sp=2 Scale=2
+XINV A Abar VDD VSS inv Sx=1 Sp=2 Scale=1
 m1 Z B A VDD PM w=120n l=80n
 m2 Z A B VDD PM w=120n l=80n
 m3 Z B Abar VSS NM w=120n l=80n
@@ -386,7 +386,7 @@ m4 Z Abar B VSS NM w=120n l=80n
 * use pass transistor logic
 * when S=1, Z=A
 * when S=0, Z=B
-XINV S Sbar VDD VSS inv scale=2
+XINV S Sbar VDD VSS inv scale=1
 m1 A Sbar Z VDD PM w=120n l=80n
 m2 A S Z VSS NM w=120n l=80n
 m3 B S Z VDD PM w=120n l=80n
@@ -460,10 +460,15 @@ XAND4 P0 P1 P2 P3 SEL VDD VSS AND4
 .subckt RCA4 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
 + SUM[3] SUM[2] SUM[1] SUM[0] CIN COUT VDD VSS
 * Instantiate the Full Adders
-XFA0 A[0] B[0] CIN SUM[0] C1 VDD VSS FA
-XFA1 A[1] B[1] C1 SUM[1] C2 VDD VSS FA
-XFA2 A[2] B[2] C2 SUM[2] C3 VDD VSS FA
-XFA3 A[3] B[3] C3 SUM[3] COUT VDD VSS FA
+XFA0 A[0] B[0] CIN SUM[0] C1bar VDD VSS FA
+XFA1 A[1] B[1] C1 SUM[1] C2bar VDD VSS FA
+XFA2 A[2] B[2] C2 SUM[2] C3bar VDD VSS FA
+XFA3 A[3] B[3] C3 SUM[3] COUTbar VDD VSS FA
+* Instantiate the Inverters
+XINV1 C1bar C1 VDD VSS inv
+XINV2 C2bar C2 VDD VSS inv
+XINV3 C3bar C3 VDD VSS inv
+XINV4 COUTbar COUT VDD VSS inv
 .ends RCA4
 * ------------------------end of 4bits Ripple Carry Adder------------------------ *
 
@@ -479,7 +484,7 @@ XFA3 A[3] B[3] C3 SUM[3] COUT VDD VSS FA
 + SUM[14] SUM[13] SUM[12] SUM[11] SUM[10] SUM[9] SUM[8] SUM[7] SUM[6]
 + SUM[5] SUM[4] SUM[3] SUM[2] SUM[1] SUM[0] VDD VSS
 * Initialize C[0] by connecting it to VSS
-VC0_tie C[0] VSS DC 0
+VC0_tie C[0] VSS 0
 * Generate the select signals
 XSELGEN_0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
 + SEL[0] VDD VSS SELGEN
@@ -541,9 +546,9 @@ XMUXA_7 C[7] COUT[8] SEL[7] SUM[32] VDD VSS MUXA
 *to test the function of your 32bits UCB carry-bypass adder, just open the first line and close the other 2 lines;
 *to fetch the critical delay of your adder, just open the second line, and close the other 2 lines.
 *to fetch the average current(to calculate power consumption, PDP and EDP), just open the third line and close the other 2 lines.
-.vec sim_vec_function.vec
-*.vec sim_vec_critical_path.vec
-*.vec sim_vec_I_P_PDP_EDP.vec
+* .vec sim_vec_function.vec
+* .vec sim_vec_critical_path.vec
+.vec sim_vec_I_P_PDP_EDP.vec
 
 
 
@@ -622,9 +627,9 @@ Csum_0 SUM[0] 0 10f
 *to test the function of your 32bits UCB carry-bypass adder, just open the first line and close the other 2 lines;
 *to fetch the critical delay of your adder, just open the second line, and close the other 2 lines.
 *to fetch the average current(to calculate power consumption, PDP and EDP), just open the third line and close the other 2 lines.
-.tran 0.05n 30n
-*.tran 0.05n 10n
-*.tran 0.1n 150n
+* .tran 0.05n 30n
+* .tran 0.05n 10n
+.tran 0.1n 150n
 
 .end
 
