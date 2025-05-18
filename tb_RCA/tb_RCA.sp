@@ -50,10 +50,15 @@ XINV4 MIDSUM SUM VDD VSS inv
 .subckt RCA4 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
 + SUM[3] SUM[2] SUM[1] SUM[0] CIN COUT VDD VSS
 * Instantiate the Full Adders
-XFA0 A[0] B[0] CIN SUM[0] C1 VDD VSS FA
-XFA1 A[1] B[1] C1 SUM[1] C2 VDD VSS FA
-XFA2 A[2] B[2] C2 SUM[2] C3 VDD VSS FA
-XFA3 A[3] B[3] C3 SUM[3] COUT VDD VSS FA
+XFA0 A[0] B[0] CIN SUM[0] C1bar VDD VSS FA
+XFA1 A[1] B[1] C1 SUM[1] C2bar VDD VSS FA
+XFA2 A[2] B[2] C2 SUM[2] C3bar VDD VSS FA
+XFA3 A[3] B[3] C3 SUM[3] COUTbar VDD VSS FA
+* Instantiate the Inverters
+XINV1 C1bar C1 VDD VSS inv
+XINV2 C2bar C2 VDD VSS inv
+XINV3 C3bar C3 VDD VSS inv
+XINV4 COUTbar COUT VDD VSS inv
 .ends RCA4
 * ------------------------end of 4bits Ripple Carry Adder------------------------ *
 
@@ -64,25 +69,26 @@ VDD VDD 0 1.2V
 VSS VSS 0 0
 * input signals
 * Input A = 1001 (9)
-Va3 ina3 VSS dc 1.2V
-Va2 ina2 VSS dc 0V
-Va1 ina1 VSS dc 0V
-Va0 ina0 VSS dc 1.2V
+Va3 ina3 VSS PWL(0ns 0V 9.9ns 0V 10ns 1.2V 19.9ns 1.2V 20ns 0V 29.9ns 0V 30ns 1.2V 39.9ns 1.2V 40ns 0V)
+Va2 ina2 VSS PWL(0ns 0V 4.9ns 0V 5ns 1.2V 9.9ns 1.2V 10ns 0V 14.9ns 0V 15ns 1.2V 19.9ns 1.2V 20ns 0V 24.9ns 0V 25ns 1.2V 29.9ns 1.2V 30ns 0V 34.9ns 0V 35ns 1.2V 39.9ns 1.2V 40ns 0V)
+Va1 ina1 VSS 0
+Va0 ina0 VSS 0
 
 * Input B = 0101 (5)
-Vb3 inb3 VSS dc 0V
-Vb2 inb2 VSS dc 1.2V
-Vb1 inb1 VSS dc 0V
-Vb0 inb0 VSS dc 1.2V
+Vb3 inb3 VSS 0
+Vb2 inb2 VSS 0
+Vb1 inb1 VSS 0
+Vb0 inb0 VSS 0
 
 * Carry In = 0
-Vcin incin VSS dc 0V
+Vcin incin VSS 0
 
 * Instantiate the 4-bit Ripple Carry Adder
 * Ports: A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0] SUM[3] SUM[2] SUM[1] SUM[0] CIN COUT VDD VSS
-Xrca1 ina3 ina2 ina1 ina0 inb3 inb2 inb1 inb0 sum3 sum2 sum1 sum0 incin cout VDD VSS RCA4
+Xrca1 ina3 ina2 ina1 ina0 inb3 inb2 inb1 inb0
++ sum3 sum2 sum1 sum0 incin cout VDD VSS RCA4
 
 * Analysis
-.tran 1ns 50ns
+.tran 0.1ns 40ns
 
 .end
