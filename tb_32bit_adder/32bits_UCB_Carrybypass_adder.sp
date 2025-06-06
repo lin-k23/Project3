@@ -364,16 +364,16 @@
 
 *-------------------------------Inverter example---------------------------------*
 *you can specify the actual value of the parameter "Sp" and "Scale" when instantiating this inverter.
-.subckt inv A Z VDD VSS Sx=1 Sp=2 Scale=1
+.subckt inv A Z VDD VSS Sx=1 Sp=3.5 Scale=1
 mp Z A VDD VDD PM  w='120n*Sp*Scale' l=80n
-mn Z A VSS VSS NM  w='120n*Sx' l=80n
+mn Z A VSS VSS NM  w='120n*Sx*Scale' l=80n
 .ends inv
 *-------------------------------end of Inverter example--------------------------*
 
 * -------------------------XOR gate model----------------------- *
 * This is a simple XOR gate model using transistors.
 .subckt XOR A B Z VDD VSS
-XINV A Abar VDD VSS inv Sx=1 Sp=2 Scale=1
+XINV A Abar VDD VSS inv Sx=1 Sp=3.5 Scale=1
 m1 Z B A VDD PM w=120n l=80n
 m2 Z A B VDD PM w=120n l=80n
 m3 Z B Abar VSS NM w=120n l=80n
@@ -387,17 +387,47 @@ m4 Z Abar B VSS NM w=120n l=80n
 * when S=1, Z=A
 * when S=0, Z=B
 XINV S Sbar VDD VSS inv scale=1
-m1 A Sbar Z VDD PM w=120n l=80n
+m1 A Sbar Z VDD PM w="120n*3.5" l=80n
 m2 A S Z VSS NM w=120n l=80n
-m3 B S Z VDD PM w=120n l=80n
+m3 B S Z VDD PM w="120n*3.5" l=80n
 m4 B Sbar Z VSS NM w=120n l=80n
 .ends MUXA
 * -------------------------end of Multiplexer: A------------------ *
 
+* ########################Multiplexer model: B######################## *
+.subckt muxb A B S Z VDD VSS
+* use 2 invs
+* when S=1, Z=~A
+* when S=0, Z=~B
+XINV1 S Sbar VDD VSS inv scale=1
+m1 A S X VSS NM w=120n l=80n
+m2 B Sbar X VSS NM w=120n l=80n
+m3 X Z VDD VDD PM w=120n l=80n
+XINV2 X Z VDD VSS inv scale=1
+.ends muxb
+* ########################END Multiplexer: B######################## *
+
+* ########################Multiplexer model: C######################## *
+.subckt muxc A B S Z VDD VSS
+* use 2 MIDSUM
+* when S=1, Z=~A
+* when S=0, Z=~B
+XINV S Sbar VDD VSS inv scale=1
+m1 X11 Sbar VDD VDD PM w=120n l=80n
+m2 Z A X11 VDD PM w="120n*3.5" l=80n
+m3 Z A X12 VSS NM w=120n l=80n
+m4 X12 S VSS VSS NM w=120n l=80n
+m5 X21 S VDD VDD PM w="120n*3.5" l=80n
+m6 Z B X21 VDD PM w=120n l=80n
+m7 Z B X22 VSS NM w=120n l=80n
+m8 X22 Sbar VSS VSS NM w=120n l=80n
+.ends muxc
+* ########################END Multiplexer: C######################## *
+
 * -------------------------subcircuit for Full Adder------------------------ *
 .subckt MID A B C Z VDD VSS
 m1 AB A VDD VDD PM w=120n l=80n
-m2 Z B AB VDD PM w=120n l=80n
+m2 Z B AB VDD PM w="120n*3.5" l=80n
 m3 Z B BC VSS NM w=120n l=80n
 m4 BC C VSS VSS NM w=120n l=80n
 .ends MID
@@ -445,7 +475,7 @@ XAND2_2 Z1 Z2 Z VDD VSS AND2
 .ends AND4
 * ------------------------end of 4bits AND ------------------------ *
 
-* ------------------------SELGEN ------------------------ *
+* * ------------------------SELGEN ------------------------ *
 .subckt SELGEN A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0] SEL VDD VSS
 XXOR0 A[0] B[0] P0 VDD VSS XOR
 XXOR1 A[1] B[1] P1 VDD VSS XOR
@@ -453,22 +483,23 @@ XXOR2 A[2] B[2] P2 VDD VSS XOR
 XXOR3 A[3] B[3] P3 VDD VSS XOR
 XAND4 P0 P1 P2 P3 SEL VDD VSS AND4
 .ends SELGEN
-* ------------------------end of SELGEN ------------------------ *
+* * ------------------------end of SELGEN ------------------------ *
 
 * ------------------------4bits Ripple Carry Adder------------------------ *
 * This is a 4-bit Ripple Carry Adder using the previously defined components.
-.subckt RCA4 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
+.subckt RCA4 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0] P[3] P[2] P[1] P[0]
 + SUM[3] SUM[2] SUM[1] SUM[0] CIN COUT VDD VSS
 * Instantiate the Full Adders
+XINVA1 A[1] Abar1 VDD VSS inv
+XINVA3 A[3] Abar3 VDD VSS inv
+XINVB1 B[1] Bbar1 VDD VSS inv
+XINVB3 B[3] Bbar3 VDD VSS inv
 XFA0 A[0] B[0] CIN SUM[0] C1bar VDD VSS FA
-XFA1 A[1] B[1] C1 SUM[1] C2bar VDD VSS FA
+XFA1 Abar1 Bbar1 C1bar SUMbar1 C2 VDD VSS FA
 XFA2 A[2] B[2] C2 SUM[2] C3bar VDD VSS FA
-XFA3 A[3] B[3] C3 SUM[3] COUTbar VDD VSS FA
-* Instantiate the Inverters
-XINV1 C1bar C1 VDD VSS inv
-XINV2 C2bar C2 VDD VSS inv
-XINV3 C3bar C3 VDD VSS inv
-XINV4 COUTbar COUT VDD VSS inv
+XFA3 Abar3 Bbar3 C3bar SUMbar3 COUT VDD VSS FA
+XINV1 sumbar1 SUM[1] VDD VSS inv
+XINV3 sumbar3 SUM[3] VDD VSS inv
 .ends RCA4
 * ------------------------end of 4bits Ripple Carry Adder------------------------ *
 
@@ -503,21 +534,21 @@ XSELGEN_6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24]
 XSELGEN_7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28]
 + SEL[7] VDD VSS SELGEN
 * Instantiate the 4-bit Ripple Carry Adders
-XRC4_0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
+XRC4_0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0] P[3] P[2] P[1] P[0]
 + SUM[3] SUM[2] SUM[1] SUM[0] C[0] COUT[1] VDD VSS RCA4
-XRC4_1 A[7] A[6] A[5] A[4] B[7] B[6] B[5] B[4]
+XRC4_1 A[7] A[6] A[5] A[4] B[7] B[6] B[5] B[4] P[7] P[6] P[5] P[4]
 + SUM[7] SUM[6] SUM[5] SUM[4] C[1] COUT[2] VDD VSS RCA4
-XRC4_2 A[11] A[10] A[9] A[8] B[11] B[10] B[9] B[8]
+XRC4_2 A[11] A[10] A[9] A[8] B[11] B[10] B[9] B[8] P[11] P[10] P[9] P[8]
 + SUM[11] SUM[10] SUM[9] SUM[8] C[2] COUT[3] VDD VSS RCA4
-XRC4_3 A[15] A[14] A[13] A[12] B[15] B[14] B[13] B[12]
+XRC4_3 A[15] A[14] A[13] A[12] B[15] B[14] B[13] B[12] P[15] P[14] P[13] P[12]
 + SUM[15] SUM[14] SUM[13] SUM[12] C[3] COUT[4] VDD VSS RCA4
-XRC4_4 A[19] A[18] A[17] A[16] B[19] B[18] B[17] B[16]
+XRC4_4 A[19] A[18] A[17] A[16] B[19] B[18] B[17] B[16] P[19] P[18] P[17] P[16]
 + SUM[19] SUM[18] SUM[17] SUM[16] C[4] COUT[5] VDD VSS RCA4
-XRC4_5 A[23] A[22] A[21] A[20] B[23] B[22] B[21] B[20]
+XRC4_5 A[23] A[22] A[21] A[20] B[23] B[22] B[21] B[20] P[23] P[22] P[21] P[20]
 + SUM[23] SUM[22] SUM[21] SUM[20] C[5] COUT[6] VDD VSS RCA4
-XRC4_6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24]
+XRC4_6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24] P[27] P[26] P[25] P[24]
 + SUM[27] SUM[26] SUM[25] SUM[24] C[6] COUT[7] VDD VSS RCA4
-XRC4_7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28]
+XRC4_7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28] P[31] P[30] P[29] P[28]
 + SUM[31] SUM[30] SUM[29] SUM[28] C[7] COUT[8] VDD VSS RCA4
 * Instantiate the Multiplexers
 XMUXA_0 C[0] COUT[1] SEL[0] C[1] VDD VSS MUXA
@@ -529,6 +560,122 @@ XMUXA_5 C[5] COUT[6] SEL[5] C[6] VDD VSS MUXA
 XMUXA_6 C[6] COUT[7] SEL[6] C[7] VDD VSS MUXA
 XMUXA_7 C[7] COUT[8] SEL[7] SUM[32] VDD VSS MUXA
 .ends UCB_ADDER_32
+
+* * -------------------------Revised RCA4 for Carry Select------------------------ *
+* * This RCA4 will compute two sets of sums and carries: one assuming Cin=0, one assuming Cin=1
+* .subckt RCA4_CS A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
+* + SUM0[3] SUM0[2] SUM0[1] SUM0[0] COUT0
+* + SUM1[3] SUM1[2] SUM1[1] SUM1[0] COUT1 VDD VSS
+* XINVA1 A[1] Abar1 VDD VSS inv
+* XINVA3 A[3] Abar3 VDD VSS inv
+* XINVB1 B[1] Bbar1 VDD VSS inv
+* XINVB3 B[3] Bbar3 VDD VSS inv
+* * RCA for Cin = 0
+* XFA0_0 A[0] B[0] VSS SUM0[0] C0_1 VDD VSS FA
+* XFA0_1 Abar1 Bbar1 C0_1 SUM0bar1 C0_2 VDD VSS FA
+* XFA0_2 A[2] B[2] C0_2 SUM0[2] C0_3 VDD VSS FA
+* XFA0_3 Abar3 Bbar3 C0_3 SUM0bar3 COUT0 VDD VSS FA
+
+* * RCA for Cin = 1
+* XFA1_0 A[0] B[0] VDD SUM1[0] C1_1 VDD VSS FA
+* XFA1_1 Abar1 Bbar1 C1_1 SUM1bar1 C1_2 VDD VSS FA
+* XFA1_2 A[2] B[2] C1_2 SUM1[2] C1_3 VDD VSS FA
+* XFA1_3 Abar3 Bbar3 C1_3 SUM1bar2 COUT1 VDD VSS FA
+
+* XINV01 SUM0bar1 SUM0[1] VDD VSS inv
+* XINV03 SUM0bar3 SUM0[3] VDD VSS inv
+* XINV11 SUM1bar1 SUM1[1] VDD VSS inv
+* XINV13 SUM1bar2 SUM1[3] VDD VSS inv
+* .ends RCA4_CS
+
+* * -------------------------Revised UCB_ADDER_32 with Carry Select------------------------ *
+* .subckt UCB_ADDER_32 A[31] A[30] A[29] A[28] A[27] A[26] A[25] A[24]
+* + A[23] A[22] A[21] A[20] A[19] A[18] A[17] A[16] A[15] A[14] A[13]
+* + A[12] A[11] A[10] A[9] A[8] A[7] A[6] A[5] A[4] A[3] A[2] A[1] A[0]
+* + B[31] B[30] B[29] B[28] B[27] B[26] B[25] B[24] B[23] B[22] B[21]
+* + B[20] B[19] B[18] B[17] B[16] B[15] B[14] B[13] B[12] B[11] B[10]
+* + B[9] B[8] B[7] B[6] B[5] B[4] B[3] B[2] B[1] B[0] SUM[32] SUM[31]
+* + SUM[30] SUM[29] SUM[28] SUM[27] SUM[26] SUM[25] SUM[24] SUM[23]
+* + SUM[22] SUM[21] SUM[20] SUM[19] SUM[18] SUM[17] SUM[16] SUM[15]
+* + SUM[14] SUM[13] SUM[12] SUM[11] SUM[10] SUM[9] SUM[8] SUM[7] SUM[6]
+* + SUM[5] SUM[4] SUM[3] SUM[2] SUM[1] SUM[0] VDD VSS
+* * Initialize C[0] by connecting it to VSS (assuming a standard adder where initial Cin is 0)
+* VC0_tie C_ACTUAL[0] VSS 0
+* * Instantiate 8 blocks of RCA4_CS (4-bit Carry Select Adders)
+* XCS_BLOCK0 A[3] A[2] A[1] A[0] B[3] B[2] B[1] B[0]
+* + SUM0_0[3] SUM0_0[2] SUM0_0[1] SUM0_0[0] COUT0_0
+* + SUM1_0[3] SUM1_0[2] SUM1_0[1] SUM1_0[0] COUT1_0 VDD VSS RCA4_CS
+* XCS_BLOCK1 A[7] A[6] A[5] A[4] B[7] B[6] B[5] B[4]
+* + SUM0_1[3] SUM0_1[2] SUM0_1[1] SUM0_1[0] COUT0_1
+* + SUM1_1[3] SUM1_1[2] SUM1_1[1] SUM1_1[0] COUT1_1 VDD VSS RCA4_CS
+* XCS_BLOCK2 A[11] A[10] A[9] A[8] B[11] B[10] B[9] B[8]
+* + SUM0_2[3] SUM0_2[2] SUM0_2[1] SUM0_2[0] COUT0_2
+* + SUM1_2[3] SUM1_2[2] SUM1_2[1] SUM1_2[0] COUT1_2 VDD VSS RCA4_CS
+* XCS_BLOCK3 A[15] A[14] A[13] A[12] B[15] B[14] B[13] B[12]
+* + SUM0_3[3] SUM0_3[2] SUM0_3[1] SUM0_3[0] COUT0_3
+* + SUM1_3[3] SUM1_3[2] SUM1_3[1] SUM1_3[0] COUT1_3 VDD VSS RCA4_CS
+* XCS_BLOCK4 A[19] A[18] A[17] A[16] B[19] B[18] B[17] B[16]
+* + SUM0_4[3] SUM0_4[2] SUM0_4[1] SUM0_4[0] COUT0_4
+* + SUM1_4[3] SUM1_4[2] SUM1_4[1] SUM1_4[0] COUT1_4 VDD VSS RCA4_CS
+* XCS_BLOCK5 A[23] A[22] A[21] A[20] B[23] B[22] B[21] B[20]
+* + SUM0_5[3] SUM0_5[2] SUM0_5[1] SUM0_5[0] COUT0_5
+* + SUM1_5[3] SUM1_5[2] SUM1_5[1] SUM1_5[0] COUT1_5 VDD VSS RCA4_CS
+* XCS_BLOCK6 A[27] A[26] A[25] A[24] B[27] B[26] B[25] B[24]
+* + SUM0_6[3] SUM0_6[2] SUM0_6[1] SUM0_6[0] COUT0_6
+* + SUM1_6[3] SUM1_6[2] SUM1_6[1] SUM1_6[0] COUT1_6 VDD VSS RCA4_CS
+* XCS_BLOCK7 A[31] A[30] A[29] A[28] B[31] B[30] B[29] B[28]
+* + SUM0_7[3] SUM0_7[2] SUM0_7[1] SUM0_7[0] COUT0_7
+* + SUM1_7[3] SUM1_7[2] SUM1_7[1] SUM1_7[0] COUT1_7 VDD VSS RCA4_CS
+* * Use MUXes to select the correct SUM and carry out for each block
+* * MUX for Block 0 (uses C_ACTUAL[0] which is fixed to 0)
+* XMUX0_0 SUM1_0[0] SUM0_0[0] C_ACTUAL[0] SUM[0] VDD VSS MUXA
+* XMUX0_1 SUM1_0[1] SUM0_0[1] C_ACTUAL[0] SUM[1] VDD VSS MUXA
+* XMUX0_2 SUM1_0[2] SUM0_0[2] C_ACTUAL[0] SUM[2] VDD VSS MUXA
+* XMUX0_3 SUM1_0[3] SUM0_0[3] C_ACTUAL[0] SUM[3] VDD VSS MUXA
+* XMUXC_0 COUT1_0 COUT0_0 C_ACTUAL[0] C_ACTUAL[1] VDD VSS MUXA
+* * MUX for Block 1
+* XMUX1_0 SUM1_1[0] SUM0_1[0] C_ACTUAL[1] SUM[4] VDD VSS MUXA
+* XMUX1_1 SUM1_1[1] SUM0_1[1] C_ACTUAL[1] SUM[5] VDD VSS MUXA
+* XMUX1_2 SUM1_1[2] SUM0_1[2] C_ACTUAL[1] SUM[6] VDD VSS MUXA
+* XMUX1_3 SUM1_1[3] SUM0_1[3] C_ACTUAL[1] SUM[7] VDD VSS MUXA
+* XMUXC_1 COUT1_1 COUT0_1 C_ACTUAL[1] C_ACTUAL[2] VDD VSS MUXA
+* * MUX for Block 2
+* XMUX2_0 SUM1_2[0] SUM0_2[0] C_ACTUAL[2] SUM[8] VDD VSS MUXA
+* XMUX2_1 SUM1_2[1] SUM0_2[1] C_ACTUAL[2] SUM[9] VDD VSS MUXA
+* XMUX2_2 SUM1_2[2] SUM0_2[2] C_ACTUAL[2] SUM[10] VDD VSS MUXA
+* XMUX2_3 SUM1_2[3] SUM0_2[3] C_ACTUAL[2] SUM[11] VDD VSS MUXA
+* XMUXC_2 COUT1_2 COUT0_2 C_ACTUAL[2] C_ACTUAL[3] VDD VSS MUXA
+* * MUX for Block 3
+* XMUX3_0 SUM1_3[0] SUM0_3[0] C_ACTUAL[3] SUM[12] VDD VSS MUXA
+* XMUX3_1 SUM1_3[1] SUM0_3[1] C_ACTUAL[3] SUM[13] VDD VSS MUXA
+* XMUX3_2 SUM1_3[2] SUM0_3[2] C_ACTUAL[3] SUM[14] VDD VSS MUXA
+* XMUX3_3 SUM1_3[3] SUM0_3[3] C_ACTUAL[3] SUM[15] VDD VSS MUXA
+* XMUXC_3 COUT1_3 COUT0_3 C_ACTUAL[3] C_ACTUAL[4] VDD VSS MUXA
+* * MUX for Block 4
+* XMUX4_0 SUM1_4[0] SUM0_4[0] C_ACTUAL[4] SUM[16] VDD VSS MUXA
+* XMUX4_1 SUM1_4[1] SUM0_4[1] C_ACTUAL[4] SUM[17] VDD VSS MUXA
+* XMUX4_2 SUM1_4[2] SUM0_4[2] C_ACTUAL[4] SUM[18] VDD VSS MUXA
+* XMUX4_3 SUM1_4[3] SUM0_4[3] C_ACTUAL[4] SUM[19] VDD VSS MUXA
+* XMUXC_4 COUT1_4 COUT0_4 C_ACTUAL[4] C_ACTUAL[5] VDD VSS MUXA
+* * MUX for Block 5
+* XMUX5_0 SUM1_5[0] SUM0_5[0] C_ACTUAL[5] SUM[20] VDD VSS MUXA
+* XMUX5_1 SUM1_5[1] SUM0_5[1] C_ACTUAL[5] SUM[21] VDD VSS MUXA
+* XMUX5_2 SUM1_5[2] SUM0_5[2] C_ACTUAL[5] SUM[22] VDD VSS MUXA
+* XMUX5_3 SUM1_5[3] SUM0_5[3] C_ACTUAL[5] SUM[23] VDD VSS MUXA
+* XMUXC_5 COUT1_5 COUT0_5 C_ACTUAL[5] C_ACTUAL[6] VDD VSS MUXA
+* * MUX for Block 6
+* XMUX6_0 SUM1_6[0] SUM0_6[0] C_ACTUAL[6] SUM[24] VDD VSS MUXA
+* XMUX6_1 SUM1_6[1] SUM0_6[1] C_ACTUAL[6] SUM[25] VDD VSS MUXA
+* XMUX6_2 SUM1_6[2] SUM0_6[2] C_ACTUAL[6] SUM[26] VDD VSS MUXA
+* XMUX6_3 SUM1_6[3] SUM0_6[3] C_ACTUAL[6] SUM[27] VDD VSS MUXA
+* XMUXC_6 COUT1_6 COUT0_6 C_ACTUAL[6] C_ACTUAL[7] VDD VSS MUXA
+* * MUX for Block 7 (final carry-out is SUM[32])
+* XMUX7_0 SUM1_7[0] SUM0_7[0] C_ACTUAL[7] SUM[28] VDD VSS MUXA
+* XMUX7_1 SUM1_7[1] SUM0_7[1] C_ACTUAL[7] SUM[29] VDD VSS MUXA
+* XMUX7_2 SUM1_7[2] SUM0_7[2] C_ACTUAL[7] SUM[30] VDD VSS MUXA
+* XMUX7_3 SUM1_7[3] SUM0_7[3] C_ACTUAL[7] SUM[31] VDD VSS MUXA
+* XMUXC_7 COUT1_7 COUT0_7 C_ACTUAL[7] SUM[32] VDD VSS MUXA
+* .ends UCB_ADDER_32
 
 
 *your code (design or implementation) ends here
@@ -619,20 +766,30 @@ Csum_0 SUM[0] 0 10f
 .measure average avg I(VDD)
 
 *Probe these outputs, of course, you can modify it yourself
-.probe V(a[0]) V(b[0]) V(a[1]) V(b[1]) V(sum[0]) V(sum[1]) V(sum[2]) V(sum[3]) V(sum[4]) V(sum[5]) V(sum[6])
-+ V(sum[7]) V(sum[8]) V(sum[9]) V(sum[10]) V(sum[11]) V(sum[12] V(sum[13]) V(sum[14]) V(sum[15]) V(sum[16])
-+ V(sum[17]) V(sum[18]) V(sum[19]) V(sum[20]) V(sum[21]) V(sum[22] V(sum[23]) V(sum[24]) V(sum[25]) V(sum[26])
-+ V(sum[27]) V(sum[28]) V(sum[29]) V(sum[30] V(sum[31]) V(sum[32]) v(vdd) I(VDD)
+.probe V(sum[0]) V(sum[1]) V(sum[2]) V(sum[3]) V(sum[4]) V(sum[5]) V(sum[6])
++ V(sum[7]) V(sum[8]) V(sum[9]) V(sum[10]) V(sum[11]) V(sum[12]) V(sum[13]) V(sum[14]) V(sum[15]) V(sum[16])
++ V(sum[17]) V(sum[18]) V(sum[19]) V(sum[20]) V(sum[21]) V(sum[22]) V(sum[23]) V(sum[24]) V(sum[25]) V(sum[26])
++ V(sum[27]) V(sum[28]) V(sum[29]) V(sum[30]) V(sum[31]) V(sum[32])
+
+.probe V(A[0]) V(A[1]) V(A[2]) V(A[3]) V(A[4]) V(A[5]) V(A[6]) V(A[7]) V(A[8])
++ V(A[9]) V(A[10]) V(A[11]) V(A[12]) V(A[13]) V(A[14]) V(A[15]) V(A[16])
++ V(A[17]) V(A[18]) V(A[19]) V(A[20]) V(A[21]) V(A[22]) V(A[23]) V(A[24])
++ V(A[25]) V(A[26]) V(A[27]) V(A[28]) V(A[29]) V(A[30]) V(A[31])
+
+.probe V(B[0]) V(B[1]) V(B[2]) V(B[3]) V(B[4]) V(B[5]) V(B[6]) V(B[7]) V(B[8])
++ V(B[9]) V(B[10]) V(B[11]) V(B[12]) V(B[13]) V(B[14]) V(B[15]) V(B[16])
++ V(B[17]) V(B[18]) V(B[19]) V(B[20]) V(B[21]) V(B[22]) V(B[23]) V(B[24])
++ V(B[25]) V(B[26]) V(B[27]) V(B[28]) V(B[29]) V(B[30]) V(B[31])
 
 *to test the function of your 32bits UCB carry-bypass adder, just open the first line and close the other 2 lines;
 *to fetch the critical delay of your adder, just open the second line, and close the other 2 lines.
 *to fetch the average current(to calculate power consumption, PDP and EDP), just open the third line and close the other 2 lines.
 * .tran 0.05n 30n
-* .tran 0.05n 10n
+* .tran 0.05n 80n
 .tran 0.1n 150n
 
 .end
 
 *################################################end of the test######################################################*
 *################################################end of the test######################################################*
-*################################################end of the test######################################################*
+*################################################end of the test######################################################

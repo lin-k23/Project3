@@ -2,9 +2,9 @@
 .include "..\simlib.sp"
 
 * ########################Inverter model######################## *
-.subckt inv A Z VDD VSS Sx=1 Sp=2 Scale=4
+.subckt inv A Z VDD VSS Sx=1 Sp=3.5 Scale=1
 mp Z A VDD VDD PM  w='120n*Sp*Scale' l=80n
-mn Z A VSS VSS NM  w='120n*Sx' l=80n
+mn Z A VSS VSS NM  w='120n*Sx*Scale' l=80n
 .ends inv
 
 * ########################XOR gate model: Behavioral######################## *
@@ -18,7 +18,7 @@ mn Z A VSS VSS NM  w='120n*Sx' l=80n
 * ########################XOR gate model: ICSE2012######################## *
 * This is a simple XOR gate model using transistors.
 .subckt XOR A B Z VDD VSS
-XINV A Abar VDD VSS inv Sx=1 Sp=2 Scale=2
+XINV A Abar VDD VSS inv
 m1 Z B A VDD PM w=120n l=80n
 m2 Z A B VDD PM w=120n l=80n
 m3 Z B Abar VSS NM w=120n l=80n
